@@ -1,1 +1,28 @@
-R
+## TUGAS PRAKTIKUM MPDW-M1
+
+---
+title : "Minggu 1"
+author : "Rafli Radithya G1-044"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+## Tentang Data
+
+Data yang digunakan merupakan data cuaca di New Delhi tahun 2013-2017. Data tersebut dikumpulkan dan diambil pada website kaggle
+
+Pada data ini, terdapat beberapa peubah, yaitu
+
+1.  Suhu rata-rata (mean)
+
+2.  fd
+
+3.  
+
+## Persiapan Package
+
+```{r}
+"hkihikhki"
+```
