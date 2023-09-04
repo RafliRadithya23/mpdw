@@ -146,7 +146,7 @@ Setelah dilakukan eksplorasi, ternyata data yang didapati berpola sensasional de
            col=c("black","red","blue"),lty=1)
     ```
 
-    Berdasarkan hasil pemulusan menggunakan metode Holt-Winters pada data training, sebagian besar kurva pemulusannya winter1.opt berhimpitan pada kurva data training atau dengan kata lain kurva pemulusannya hampir mirip dengan kurva data training dibandingkan kurva pemulusan winter1.
+    Berdasarkan hasil pemulusan menggunakan metode Holt-Winters pada data training, sebagian besar kurva pemulusannya winter1.opt yang ditandai dengan warna biru berhimpitan pada kurva data training atau dengan kata lain kurva pemulusannya hampir mirip dengan kurva data training dibandingkan kurva pemulusan winter1 yang ditandai dengan warna merah. Jadi, secara visual, pemulusan winter 1 opt lebih baik
 
 4.  Perhitungan akurasi data latih
 
@@ -175,13 +175,31 @@ Setelah dilakukan eksplorasi, ternyata data yang didapati berpola sensasional de
     akurasi1.train
     ```
 
+    Berdasarkan perhitungan kesalahan dengan SSE, MSE, dan RMSE, secara umum, nilai kesalahan pada winter1 optimal lebih kecil dibandingkan pada winter 1. Oleh karena itu, pemulusan dengan winter1 optimal lebih baik.
+
 5.  Perhitungan akurasi data uji
 
     ```{r}
-    #Akurasi Data Testing
+    #Akurasi Data Testing opt
     forecast1.opt<-data.frame(forecast1.opt)
     test <- data.frame(test)
-    selisih1.opt<-forecast1.opt-test
+    selisih1.opt.test<-forecast1.opt-test
     SSEtesting1.opt<-sum((selisih1.opt)^2)
     MSEtesting1.opt<-SSEtesting1.opt/length(test)
+    RMSEtesting1.opt <- sqrt(MSEtesting1.opt)
+
+    forecast1<-data.frame(forecast1)
+    test <- data.frame(test)
+    selisih2=forecast1-test
+    SSEtesting1=sum(selisih2^2)
+    MSEtesting1=SSEtesting1/length(test)
+    RMSEtesting1=sqrt(MSEtesting1)
+
+    akurasi1.test = data.frame(Model_Winter = c("Winter 1","Winter1 optimal"),
+                                Nilai_SSE=c(SSEtesting1,SSEtesting1.opt),
+                                Nilai_MSE=c(MSEtesting1,MSEtesting1.opt),Nilai_RMSE=c(RMSEtesting1,RMSEtesting1.opt))
+    akurasi1.test
+
     ```
+
+    Berdasarkan perhitungan kesalahan data testing dengan SSE, MSE, dan RMSE, diketahui bahwa kesalahan winter1 optimal lebih kecil dibandingkan kesalahan winter1
