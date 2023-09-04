@@ -11,18 +11,177 @@ output:
 
 ## Tentang Data
 
-Data yang digunakan merupakan data cuaca di New Delhi tahun 2013-2017. Data tersebut dikumpulkan dan diambil pada website kaggle
+Data yang digunakan merupakan data cuaca harian di New Delhi selama 4 tahun, yaitu tahun 2013-2017. Data tersebut tersedia pada website Weather Undergroud API kemudian diunduh dari website kaggle.
 
 Pada data ini, terdapat beberapa peubah, yaitu
 
-1.  Suhu rata-rata (mean)
+1.  Suhu rata-rata (Celcius)
 
-2.  fd
+2.  Humiditas (Jumlah uap air)
 
-3.  
+3.  Kecepatan angin
 
-## Persiapan Package
+4.  Tekanan udara rata-rata
+
+Dalam tugas 1 ini, data yang dipilih merupakan data dengan 2 peubah, yaitu periode (waktu harian) dan Suhu rata-rata dengan satuan celcius.
+
+## Eksplorasi Data
+
+Akan dilakukan eksplorasi data agar dapat melihat kecenderungan pola dari data yang dimiliki
+
+1.  Persiapan package
 
 ```{r}
-"hkihikhki"
+library(forecast)
+library(graphics)
+library(TTR)
+library(TSA)
+
 ```
+
+2.  Input data
+
+```{r}
+
+setwd("C:/Users/USER/OneDrive/Dokumen/PRAKTIKUM MPDW 2023/PRAKTIKUM MPDW 2023/pertemuan1")
+cl=read.csv("Climate.csv",sep=";")
+cl
+
+```
+
+3.  Jadikan data meantemp data time series
+
+```{r}
+cl$meantemp=as.numeric(cl$meantemp)
+data.ts=ts(cl$meantemp)
+data.ts=as.data.frame(data.ts)
+summary(data.ts)
+
+```
+
+Berdasarkan ringkasan statistik tersebut, diketahui bahwa rata-rata suhu terpanas berada pada 38.27 derajat celcius dan terdingin pada 11.19 derajat celcius pada tahun 2016 di New Delhi
+
+4.  Plot data
+
+```{r}
+ts.plot(data.ts, col="blue",xlab="Periode", ylab="Rataan Suhu (Celcius)", 
+        main = "Time Series Plot")
+points(data.ts)
+```
+
+Berdasarkan hasil plot time series data suhu rataan di Kota New Delhi selama tahun 2013-2017, dapat terlihat bahwa data berpola berfluktuatif dengan ragam yang konstan atau dengan kata lain data sensasional. Dengan demikian, diduga adanya pengaruh waktu terhadap pola data suhu rata-rata di New Delhi.
+
+## Pemilihan Data Training & Testing
+
+Pemilihan data training & testing dilakukan pada data yang ada dengan proporsi 80% data training dan 20% data testing. Adapun pengambilan nilai frekuensi disesuaikan pada pola data yang berulang setiap 400 periode
+
+```{r}
+ntrain=round(nrow(cl)*0.8)
+ntest=nrow(cl)-ntrain
+ntrain
+ntest
+
+train = data.ts[1:ntrain,]
+test = data.ts[(ntrain+1):1576,]
+
+train=ts(train,frequency=250)
+test=ts(test,frequency=250)
+
+```
+
+Sehingga didapatkan data training berjumlah 1261 dan testing berjumlah 315. Setelah pembagian data training & testing, akan dilakukan eksplorasi data pada data training dan testing
+
+```{r}
+#eksplorasi data latih
+plot(train, col="blue",xlab="Waktu", ylab="Suhu",main="Plot Data Training")
+
+
+#eksplorasi data uji
+plot(test, col="blue",xlab="Waktu", ylab="Suhu",main="Plot Data Testing")
+
+
+
+```
+
+Berdasarkan plot data training maupun testing, pola keduanya terlihat cenderung stasioner.
+
+## Pemulusan Winter Aditif
+
+Setelah dilakukan eksplorasi, ternyata data yang didapati berpola sensasional dengan ragam yang cukup konstan sehingga dipilih metode pemulusan winter aditif.
+
+1.  Pemulusan data menggunakan fungsi di bawah
+
+    ```{r}
+    #Pemulusan dengan winter aditif 
+    winter1 <- HoltWinters(train,alpha=0.2,beta=0.1,gamma=0.1,seasonal = "additive")
+    winter1$fitted
+    xhat1 <- winter1$fitted[,2]
+
+    winter1.opt<- HoltWinters(train, alpha= NULL,  beta = NULL, gamma = NULL, seasonal = "additive")
+    winter1.opt
+    winter1.opt$fitted
+    xhat1.opt <- winter1.opt$fitted[,2]
+    ```
+
+2.  Forecasting data
+
+    ```{r}
+    #Forecast
+    winter1
+    winter1.opt
+    forecast1 <- predict(winter1, n.ahead = 315)
+    forecast1.opt <- predict(winter1.opt, n.ahead = 315)
+    ```
+
+3.  Plot Time Series
+
+    ```{r}
+    plot(train,main="Winter 0.2;0.1;0.1",type="l",col="black",pch=12)
+    lines(xhat1,type="l",col="red")
+    lines(xhat1.opt,type="l",col="blue")
+    lines(forecast1,type="l",col="red")
+    lines(forecast1.opt,type="l",col="blue")
+    legend("topleft",c("Actual Data",expression(paste(winter1)),
+                       expression(paste(winter1.opt))),cex=0.5,
+           col=c("black","red","blue"),lty=1)
+    ```
+
+    Berdasarkan hasil pemulusan menggunakan metode Holt-Winters pada data training, sebagian besar kurva pemulusannya winter1.opt berhimpitan pada kurva data training atau dengan kata lain kurva pemulusannya hampir mirip dengan kurva data training dibandingkan kurva pemulusan winter1.
+
+4.  Perhitungan akurasi data latih
+
+    ```{r}
+    #Menghitung nilai keakuratan data latih
+    #Akurasi data training
+    SSE1<-winter1$SSE
+    MSE1<-winter1$SSE/length(train)
+    RMSE1<-sqrt(MSE1)
+    akurasi1 <- matrix(c(SSE1,MSE1,RMSE1))
+    row.names(akurasi1)<- c("SSE", "MSE", "RMSE")
+    colnames(akurasi1) <- c("Akurasi")
+    akurasi1
+
+    SSE1.opt<-winter1.opt$SSE
+    MSE1.opt<-winter1.opt$SSE/length(train)
+    RMSE1.opt<-sqrt(MSE1.opt)
+    akurasi1.opt <- matrix(c(SSE1.opt,MSE1.opt,RMSE1.opt))
+    row.names(akurasi1.opt)<- c("SSE1.opt", "MSE1.opt", "RMSE1.opt")
+    colnames(akurasi1.opt) <- c("Akurasi")
+    akurasi1.opt
+
+    akurasi1.train = data.frame(Model_Winter = c("Winter 1","Winter1 optimal"),
+                                Nilai_SSE=c(SSE1,SSE1.opt),
+                                Nilai_MSE=c(MSE1,MSE1.opt),Nilai_RMSE=c(RMSE1,RMSE1.opt))
+    akurasi1.train
+    ```
+
+5.  Perhitungan akurasi data uji
+
+    ```{r}
+    #Akurasi Data Testing
+    forecast1.opt<-data.frame(forecast1.opt)
+    test <- data.frame(test)
+    selisih1.opt<-forecast1.opt-test
+    SSEtesting1.opt<-sum((selisih1.opt)^2)
+    MSEtesting1.opt<-SSEtesting1.opt/length(test)
+    ```
