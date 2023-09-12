@@ -15,7 +15,7 @@ Data yang digunakan merupakan data cuaca harian di New Delhi selama 4 tahun, yai
 
 Pada data ini, terdapat beberapa peubah, yaitu
 
-1.  Suhu rata-rata (Celcius)
+1.  Suhu rata-rata
 
 2.  Humiditas (Jumlah uap air)
 
@@ -73,7 +73,7 @@ Berdasarkan hasil plot time series data suhu rataan di Kota New Delhi selama tah
 
 ## Pemilihan Data Training & Testing
 
-Pemilihan data training & testing dilakukan pada data yang ada dengan proporsi 80% data training dan 20% data testing. Adapun pengambilan nilai frekuensi disesuaikan pada pola data yang berulang setiap 400 periode
+Pemilihan data training & testing dilakukan pada data yang ada dengan proporsi 80% data training dan 20% data testing. Adapun pengambilan nilai frekuensi disesuaikan pada pola data yang berulang setiap 250 periode
 
 ```{r}
 ntrain=round(nrow(cl)*0.8)

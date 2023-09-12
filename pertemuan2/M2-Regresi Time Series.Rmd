@@ -1,0 +1,300 @@
+# TUGAS PRAKTIKUM MPDW-REGRESI TIME SERIES
+
+---
+title: "M2"
+author: "Rafli Radithya"
+date: "6/9/2023"
+output: html_document
+---
+
+## Tentang Data
+
+Data yang digunakan merupakan data climate time series yang diamati sejak 01-09-1989 hingga 23-02-1990 setiap 1 jam sekali. Adapun daftar peubahnya terdiri dari
+
+1.  Temperature
+
+2.  Humidity
+
+3.  Solar
+
+4.  Wind
+
+Dalam tugas ini, digunakan 4 peubah tersebut dengan 1 sebagai peubah dependen, yaitu Temperature serta humidity, solar, dan wind sebagai peubah independen
+
+## Eksplorasi Data
+
+1.  Persiapan package
+
+    ```{r}
+    library(dplyr)
+    library(TTR)
+    library(forecast)
+    library(lmtest) #digunakan untuk uji formal pendeteksian autokorelasi
+    library(orcutt) #untuk membuat model regresi Cochrane-Orcutt
+    library(HoRM) #untuk membuat model regresi Hildreth-Lu
+    ```
+
+2.  Input data
+
+    ```{r}
+    setwd("C:/Users/USER/OneDrive/Dokumen/PRAKTIKUM MPDW 2023/PRAKTIKUM MPDW 2023/pertemuan2/data")
+    mpdw=read.csv("mpdw2v2.csv",sep=";")
+    mpdw
+    ```
+
+3.  Plot time series untuk setiap peubah
+
+    ```{r}
+
+    par(mfrow = c(2,2))
+    #Temp
+    v2.ts=ts(mpdw$V2)
+    ts.plot(temp.ts, xlab="Periode", ylab="V2", main= "Time Series Plot of Temperature")
+    points(v2.ts)
+
+    #Humid
+    v3.ts=ts(mpdw$V3)
+    ts.plot(humid.ts, xlab="Periode", ylab="V3", main= "Time Series Plot of Humidity")
+    points(v3.ts)
+
+    #Solar
+    v4.ts=ts(mpdw$V4)
+    ts.plot(solar.ts, xlab="Periode", ylab="V4", main= "Time Series Plot of Solar")
+    points(v4.ts)
+
+    #Wind
+    v5.ts=ts(mpdw$V5)
+    ts.plot(wind.ts, xlab="Periode", ylab="V5", main= "Time Series Plot of Wind")
+    points(v5.ts)
+    ```
+
+Berdasarkan eksplorasi plot time series di atas, diketahui bahwa 4 peubah, yaitu Temperature, Humidity, Solar, dan Wind memiliki pola data time series yang relatif sama, yaitu sensasional additive. Adapun ciri khas dari pola tersebut, yaitu data berfluktuasi dengan ragam yang konstan
+
+## Regresi Time Series
+
+Pemodelan awal
+
+```{r}
+model=lm(TEMP~HUMID+WIND+SOLAR,data=datam2)
+summary(model)
+```
+
+Hasil pemodelan regresi awal yang diperoleh, yaitu \$\$y_i=44.96+2106x_1+0.02652x_2-0.4269x_3\$\$ dengan nilai p-value dari statistik F sebesar \< 5% yang berarti minimal terdapat 1 peubah yang berpengaruh nyata terhadap model dengan keyakinan 95%. Selanjutnya, nilai p-value dari statistik uji t pada setiap peubah \< alpha (5%) yang berarti setiap peubah berpengaruh nyata terhadap model. Adapun nilai R-square yang didapatkan sebesar 0.5217 yang berarti sebesar 52.17% nilai temperature dapat dijelaskan oleh model.
+
+## Diagnostik Regresi
+
+Terdapat beberapa asumsi regresi linear yang harus dipenuhi, yaitu
+
+-   Sisaan harus menyebar normal
+
+-   Nilai harapan sisaan = 0 dengan ragam yang konstan
+
+-   Tidak ada autokorelasi antar sisaan
+
+-   Tidak ada multikolinearitas
+
+Dengan demikian, akan dilakukan diagnostik model awal yang telah didapat
+
+1.  Plot Eksplorasi
+
+    ```{r}
+    par(mfrow = c(1,3))
+    #Plot residual vs fitted value
+    plot(model,1)
+
+    #Plot normal Q-Q plot
+    plot(model,2)
+
+    #Plot residual vs order
+    sisaan<- residuals(model)
+    plot(seq(1,4208,1), sisaan, col = "steelblue", pch = 10, xlab = "Order", ylab = "Residuals", main = "Sisaan vs Order")
+    lines(seq(1,4208,1), sisaan, col = "red")
+    abline(a = 0, b = 0, lwd = 2)
+
+
+    ```
+
+    Pada plot 1: Sisaan vs Residual, terlihat bahwa sisaan berada pada rentang -40 dan 40 serta sebagian besar sisaannya berada pada nilai 0 sehingga dapat diduga bahwa ragam sisaan homogen dengan nilai harapannya = 0.
+
+    Pada plot 2: Q-Q plot, terlihat bahwa sisaan baku cenderung mengikuti garis lurus Q-Q plot sehingga dapat diduga bahwa sisaan menyebar normal.
+
+    Pada plot 3: Sisaan vs order, sisaan cenderung membentuk suatu pola yang stasioner sehingga dapat diduga kuat bahwa data mengandung autokorelasi.
+
+2.  Plot ACF & PACF untuk autokorelasi
+
+    ```{r}
+    #Plot ACF dan PACF identifikasi autokorelasi
+    par(mfrow = c(1,2))
+    acf(sisaan)
+    pacf(sisaan)
+    ```
+
+3.  Uji formal
+
+    Akan dilakukan beberapa uji formal untuk mengecek asumsi, yaitu
+
+    Kenormalan sisaan
+
+    H0 : Sisaan menyebar normal vs H1 : Sisaan tidak menyebar normal
+
+```{r}
+#Uji Kolmogorov-Smirnov
+ks.test(sisaan, "pnorm", mean=mean(sisaan), sd=sd(sisaan))
+```
+
+Berdasarkan hasil uji kenormalan sisaan dengan uji Kolmogorov-Smirnov, p-value yang \< alpha 5% yang berarti bahwa sisaan tidak menyebar normal sehingga perlu dilakukan penanganan
+
+Kehomogenan Ragam
+
+H0 : Ragam homogen vs H1 : Ragam tidak homogen
+
+```{r}
+#Breusc-Pagan Test
+library(lmtest)
+bptest(model)
+```
+
+Berdasarkan uji kehomogenan ragam, diperoleh nilai p \< taraf alpha 5% sehingga ragam sisaan tidak homogen
+
+Autokorelasi
+
+H0 : Tidak ada autokorelasi vs H1: Ada autokorelasi
+
+```{r}
+#Durbin Watson test
+dwtest(model)
+```
+
+Berdasarkan uji autukorelasi dengan durbin-watson test, didapati p-value \< taraf alpha 5% yang berarti terdapat autokorelasi antar sisaan dengan tingkat keyakinan 95%.
+
+## Penanganan Autokorelasi
+
+1.  Metode Cochrane-Orcutt
+
+    ```{r}
+    #Penanganan Autokorelasi Cochrane-Orcutt
+    modelCO<-cochrane.orcutt(model)
+    modelCO
+    ```
+
+    Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. \$\$y_i=59.472475-222.498689x_1-0.005529x_2+0.008322x_3\$\$. Hasil juga menunjukkan bahwa nilai p-value meningkat menjadi 0.00. Dengan nilai \*p-value\* \\\> 0.05, artinya belum cukup bukti menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Untuk nilai \$ρ ̂\$ optimum yang digunakan adalah \$0.994673\$. Selanjutnya akan dilakukan transformasi secara manual dengan syntax berikut ini.
+
+    ```{r}
+    #Rho optimum
+    rho<- modelCO$rho
+
+    #Transformasi Manual
+    temp.trans<- datam2$TEMP[-1]-datam2$TEMP[-4208]*rho
+    humid.trans<- datam2$HUMID[-1]-datam2$HUMID[-4208]*rho
+    wind.trans<- datam2$WIND[-1]-datam2$WIND[-4208]*rho
+    solar.trans<- datam2$SOLAR[-1]-datam2$SOLAR[-4208]*rho
+    modelCOmanual<- lm(temp.trans~humid.trans+wind.trans+solar.trans)
+    summary(modelCOmanual)
+
+    ```
+
+    Karena hasil model transformasi bukan merupakan model sesungguhnya. Koefisien regresi masih perlu dicari kembali mengikuti \$β_0\^\*=β_0+ρ ̂β_0\$ dan \$β_1\^\*=β_1\$ dengan syntax berikut
+
+    ```{r}
+    #Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
+    b0bintang <- modelCOmanual$coefficients[1]
+    b0 <- b0bintang/(1-rho)
+    b1 <- modelCOmanual$coefficients[2]
+    b2 <- modelCOmanual$coefficients[3]
+    b3 <- modelCOmanual$coefficients[4]
+    data.frame(b0,b1,b2,b3)
+    ```
+
+    Selanjutnya, akan diuji autokorelasi dengan durbin-watson
+
+    ```{r}
+    dwtest(modelCOmanual)
+    ```
+
+2.  Metode Hildreth-Lu
+
+    ```{r}
+    x=model.matrix(model)[,-1]
+     y <- model.response(model.frame(model))
+     
+     summary(lm(y~x))
+    ```
+
+    ```{r}
+    # Hildreth-Lu
+    hildreth.lu.func<- function(r, model){
+      x <- model.matrix(model)[,-1]
+      y <- model.response(model.frame(model))
+      n <- length(y)
+      t <- 2:n
+      y <- y[t]-r*y[t-1]
+      x <- x[t]-r*x[t-1]
+      
+      return(lm(y~x))
+    }
+    ```
+
+    ```{r}
+    #Penanganan Autokorelasi Hildreth lu
+    #Pembuatan Hildreth-Lu Function
+    hildreth.lu.func<- function(r, model){
+      x1 <- model.matrix(model)[,2]
+      x2 <- model.matrix(model)[,3]
+      x3 <- model.matrix(model)[,4]
+      
+      y <- model.response(model.frame(model))
+      n <- length(y)
+      t <- 2:n
+      y <- y[t]-r*y[t-1]
+      x1 <- x[t]-r*x1[t-1]
+      x2 <- x2[t]-r*x2[t-1]
+      x3 <- x3[t]-r*x3[t-1]
+      m=lm(y~x1+x2+x3)
+      return(m)
+    }
+    ```
+
+    Akan dicari rho yang meminimumkan SSE dengan syntax berikut
+
+    ```{r}
+    #Pencarian rho yang meminimumkan SSE
+    r <- c(seq(0.1,0.9, by= 0.1))
+    tab <- data.frame("rho" = r, "SSE" = sapply(r, function(i){deviance(hildreth.lu.func(i, model))}))
+    round(tab, 4)
+    ```
+
+    Untuk mencari nilai rho yang lebih optimum, akan dilakukan pengecilan selang dan jarak antar rho. Pada proses sebelumnya, diketahui nilai rho optimum berada pada 0.9 sehingga akan dipilih rentang rho yang lebih kecil, 0.6 sampai 0.999 dengan jarak tiap nilai rho 0.001
+
+    ```{r}
+    #Rho optimal di sekitar 0.9
+    rOpt <- seq(0.6,0.999, by= 0.001)
+    tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, model))}))
+    rOPTIM=tabOpt$rho[1]
+    head(tabOpt[order(tabOpt$SSE),])
+    ```
+
+    Setelah dilakukan pengurutan nilai rho berdasarkan SSE-nya, diketahui nilai rho dengan SSE paling kecil adalah 0.995. Selanjutnya, akan dicari model terbaiknya dengan nilai rho tersebut
+
+    ```{r}
+    #Model terbaik
+    modelHL <- hildreth.lu.func(rOPTIM, model)
+    m=summary(modelHL)
+    m
+    ```
+
+    Selanjutnya, akan dilakukan transformasi balik untuk mendapatkan model awal
+
+    ```{r}
+    #Transformasi Balik untuk mendapatkan koefisien regresinya
+    b0=coef(m)[1]/(1-rOPTIM)
+    b1=coef(m)[2]
+    b2=coef(m)[3]
+    b3=coef(m)[4]
+    data.frame(b0,b1,b2,b3)
+    ```
+
+Uji DW TEST
+
+```{r}
+dwtest(modelHL)
+```
