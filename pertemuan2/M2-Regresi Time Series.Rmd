@@ -9,17 +9,17 @@ output: html_document
 
 ## Tentang Data
 
-Data yang digunakan merupakan data climate time series yang diamati sejak 01-09-1989 hingga 23-02-1990 setiap 1 jam sekali. Adapun daftar peubahnya terdiri dari
+Data yang digunakan merupakan data m4 competition forecasting yang diperoleh dari website Kaggle dengan banyak datanya 4227 baris. Adapun daftar peubahnya terdiri dari
 
-1.  Temperature
+1.  V2 = y
 
-2.  Humidity
+2.  V3 = x1
 
-3.  Solar
+3.  V4 = x2
 
-4.  Wind
+4.  V5 = x3
 
-Dalam tugas ini, digunakan 4 peubah tersebut dengan 1 sebagai peubah dependen, yaitu Temperature serta humidity, solar, dan wind sebagai peubah independen
+Dalam tugas ini, digunakan 4 peubah tersebut dengan 1 sebagai peubah dependen, yaitu V2 dan V3, V4, dan V5 sebagai peubah independen
 
 ## Eksplorasi Data
 
@@ -49,41 +49,41 @@ Dalam tugas ini, digunakan 4 peubah tersebut dengan 1 sebagai peubah dependen, y
     par(mfrow = c(2,2))
     #Temp
     v2.ts=ts(mpdw$V2)
-    ts.plot(temp.ts, xlab="Periode", ylab="V2", main= "Time Series Plot of Temperature")
+    ts.plot(temp.ts, xlab="Periode", ylab="V2", main= "Time Series Plot of V2")
     points(v2.ts)
 
     #Humid
     v3.ts=ts(mpdw$V3)
-    ts.plot(humid.ts, xlab="Periode", ylab="V3", main= "Time Series Plot of Humidity")
+    ts.plot(humid.ts, xlab="Periode", ylab="V3", main= "Time Series Plot of V3")
     points(v3.ts)
 
     #Solar
     v4.ts=ts(mpdw$V4)
-    ts.plot(solar.ts, xlab="Periode", ylab="V4", main= "Time Series Plot of Solar")
+    ts.plot(solar.ts, xlab="Periode", ylab="V4", main= "Time Series Plot of V4")
     points(v4.ts)
 
     #Wind
     v5.ts=ts(mpdw$V5)
-    ts.plot(wind.ts, xlab="Periode", ylab="V5", main= "Time Series Plot of Wind")
+    ts.plot(wind.ts, xlab="Periode", ylab="V5", main= "Time Series Plot of V5")
     points(v5.ts)
     ```
 
-Berdasarkan eksplorasi plot time series di atas, diketahui bahwa 4 peubah, yaitu Temperature, Humidity, Solar, dan Wind memiliki pola data time series yang relatif sama, yaitu sensasional additive. Adapun ciri khas dari pola tersebut, yaitu data berfluktuasi dengan ragam yang konstan
+Berdasarkan eksplorasi plot time series di atas, diketahui bahwa 4 peubah, yaitu V2,V3,V4, dan V5 memiliki pola data time series yang relatif sama, yaitu sensasional additive. Adapun ciri khas dari pola tersebut, yaitu data berfluktuasi dengan ragam yang konstan
 
 ## Regresi Time Series
 
 Pemodelan awal
 
 ```{r}
-model=lm(TEMP~HUMID+WIND+SOLAR,data=datam2)
+model=lm(V2~V3+V4+V5,data=mpdw)
 summary(model)
 ```
 
-Hasil pemodelan regresi awal yang diperoleh, yaitu \$\$y_i=44.96+2106x_1+0.02652x_2-0.4269x_3\$\$ dengan nilai p-value dari statistik F sebesar \< 5% yang berarti minimal terdapat 1 peubah yang berpengaruh nyata terhadap model dengan keyakinan 95%. Selanjutnya, nilai p-value dari statistik uji t pada setiap peubah \< alpha (5%) yang berarti setiap peubah berpengaruh nyata terhadap model. Adapun nilai R-square yang didapatkan sebesar 0.5217 yang berarti sebesar 52.17% nilai temperature dapat dijelaskan oleh model.
+Hasil pemodelan regresi awal yang diperoleh, yaitu \$\$y_i=44.96+2106x_1+0.02652x_2-0.4269x_3\$\$ dengan nilai p-value dari statistik F sebesar \< 5% yang berarti minimal terdapat 1 peubah yang berpengaruh nyata terhadap model dengan keyakinan 95%. Selanjutnya, nilai p-value dari statistik uji t pada setiap peubah \< alpha (5%) yang berarti setiap peubah berpengaruh nyata terhadap model. Adapun nilai R-square yang didapatkan sebesar 0.9989 yang berarti sebesar 99.89% nilai V2 dapat dijelaskan oleh model.
 
 ## Diagnostik Regresi
 
-Terdapat beberapa asumsi regresi linear yang harus dipenuhi, yaitu
+Terdapat beberapa asumsi regresi linear gauss-markov yang harus dipenuhi, yaitu
 
 -   Sisaan harus menyebar normal
 
@@ -107,20 +107,30 @@ Dengan demikian, akan dilakukan diagnostik model awal yang telah didapat
 
     #Plot residual vs order
     sisaan<- residuals(model)
-    plot(seq(1,4208,1), sisaan, col = "steelblue", pch = 10, xlab = "Order", ylab = "Residuals", main = "Sisaan vs Order")
-    lines(seq(1,4208,1), sisaan, col = "red")
+    plot(seq(1,4227,1), sisaan, col = "steelblue", pch = 10, xlab = "Order", ylab = "Residuals", main = "Sisaan vs Order")
+    lines(seq(1,4227,1), sisaan, col = "red")
     abline(a = 0, b = 0, lwd = 2)
 
 
     ```
 
-    Pada plot 1: Sisaan vs Residual, terlihat bahwa sisaan berada pada rentang -40 dan 40 serta sebagian besar sisaannya berada pada nilai 0 sehingga dapat diduga bahwa ragam sisaan homogen dengan nilai harapannya = 0.
+    Pada plot 1: Sisaan vs Residual, terlihat bahwa sisaan berada pada rentang -2000 dan 2000 serta sebagian besar sisaannya berada pada nilai 0 sehingga dapat diduga bahwa ragam sisaan homogen dengan nilai harapannya = 0.
 
     Pada plot 2: Q-Q plot, terlihat bahwa sisaan baku cenderung mengikuti garis lurus Q-Q plot sehingga dapat diduga bahwa sisaan menyebar normal.
 
     Pada plot 3: Sisaan vs order, sisaan cenderung membentuk suatu pola yang stasioner sehingga dapat diduga kuat bahwa data mengandung autokorelasi.
 
-2.  Plot ACF & PACF untuk autokorelasi
+2.  Pengecekan multikolinearitas
+
+    ```{r}
+    #Pengecekan multikol dengan VIF
+    library(car)
+    vif(model)
+    ```
+
+    Berdasarkan pengujian multikolinearitas dengan metode VIF, diketahui bahwa terdapat multikolinearitas pada setiap variabel, yaitu pada V3, V4, dan V5. Hal tersebut ditandai dengan nilai VIF > 5
+
+3.  Plot ACF & PACF untuk autokorelasi
 
     ```{r}
     #Plot ACF dan PACF identifikasi autokorelasi
@@ -129,7 +139,9 @@ Dengan demikian, akan dilakukan diagnostik model awal yang telah didapat
     pacf(sisaan)
     ```
 
-3.  Uji formal
+    Berdasarkan plot ACF dan partial ACF, diketahui bahwa terdapat beberapa amatan yang berada di luar selang sehingga dapat dicurigai terdapat autokorelasi dalam data tersebut.
+
+4.  Uji formal
 
     Akan dilakukan beberapa uji formal untuk mengecek asumsi, yaitu
 
@@ -177,23 +189,23 @@ Berdasarkan uji autukorelasi dengan durbin-watson test, didapati p-value \< tara
     modelCO
     ```
 
-    Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. \$\$y_i=59.472475-222.498689x_1-0.005529x_2+0.008322x_3\$\$. Hasil juga menunjukkan bahwa nilai p-value meningkat menjadi 0.00. Dengan nilai \*p-value\* \\\> 0.05, artinya belum cukup bukti menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Untuk nilai \$ρ ̂\$ optimum yang digunakan adalah \$0.994673\$. Selanjutnya akan dilakukan transformasi secara manual dengan syntax berikut ini.
+    Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. \$\$y_i=17.166026-1.515539x_1-0.832688x_2+0.313705x_3\$\$. Hasil juga menunjukkan bahwa nilai p-value meningkat dari 2.031e-19 menjadi 0.7531. Dengan nilai \*p-value\* \\\> 0.05, artinya belum cukup bukti menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Untuk nilai \$ρ ̂\$ optimum yang digunakan adalah \$0.994673\$. Selanjutnya akan dilakukan transformasi secara manual dengan syntax berikut ini.
 
     ```{r}
     #Rho optimum
     rho<- modelCO$rho
 
     #Transformasi Manual
-    temp.trans<- datam2$TEMP[-1]-datam2$TEMP[-4208]*rho
-    humid.trans<- datam2$HUMID[-1]-datam2$HUMID[-4208]*rho
-    wind.trans<- datam2$WIND[-1]-datam2$WIND[-4208]*rho
-    solar.trans<- datam2$SOLAR[-1]-datam2$SOLAR[-4208]*rho
-    modelCOmanual<- lm(temp.trans~humid.trans+wind.trans+solar.trans)
+    v2.trans<- mpdw$V2[-1]-mpdw$V2[-4227]*rho
+    v3.trans<- mpdw$V3[-1]-mpdw$V3[-4227]*rho
+    v4.trans<- mpdw$V4[-1]-mpdw$V4[-4227]*rho
+    v5.trans<- mpdw$V5[-1]-mpdw$V5[-4227]*rho
+    modelCOmanual<- lm(v2.trans~v3.trans+v4.trans+v5.trans)
     summary(modelCOmanual)
 
     ```
 
-    Karena hasil model transformasi bukan merupakan model sesungguhnya. Koefisien regresi masih perlu dicari kembali mengikuti \$β_0\^\*=β_0+ρ ̂β_0\$ dan \$β_1\^\*=β_1\$ dengan syntax berikut
+    Karena hasil model transformasi bukan merupakan model sesungguhnya. Koefisien regresi masih perlu dicari kembali mengikuti \$β_0\^\*=β_0+ρ ̂β_0\$ dan \$β_1\^\*=β_1\$, \$β_2\^\*=β_2\$, \$β_3\^\*=β_3\$, dan \$β_4\^\*=β_4\$ dengan syntax berikut
 
     ```{r}
     #Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
@@ -205,34 +217,17 @@ Berdasarkan uji autukorelasi dengan durbin-watson test, didapati p-value \< tara
     data.frame(b0,b1,b2,b3)
     ```
 
-    Selanjutnya, akan diuji autokorelasi dengan durbin-watson
+    Setelah dilakukan transformasi kembali, didapati model seperti model yang dihasilkan menggunakan package, yaitu **y=17.16603+1.515539x1-0.8326881+0.3137049x3**. Selanjutnya, akan diuji autokorelasi dari model tersebut dengan uji durbin-watson
+
+    H0 : tidak ada autokorelasi vs H1 : ada autokorelasi
 
     ```{r}
     dwtest(modelCOmanual)
     ```
 
+    Berdasarkan pengujian menggunakan durbin watson tst, diketahui bahwa nilai p-value yang didapatkan sebesar 0.7351 yang > alpha (0.05) sehingga belum cukup bukti untuk menyatakan ada autokorelasi dalam model tersebut. Oleh karena itu, penanganan autokorelasi dengan metode Cochrane-Orcutt tertangani
+
 2.  Metode Hildreth-Lu
-
-    ```{r}
-    x=model.matrix(model)[,-1]
-     y <- model.response(model.frame(model))
-     
-     summary(lm(y~x))
-    ```
-
-    ```{r}
-    # Hildreth-Lu
-    hildreth.lu.func<- function(r, model){
-      x <- model.matrix(model)[,-1]
-      y <- model.response(model.frame(model))
-      n <- length(y)
-      t <- 2:n
-      y <- y[t]-r*y[t-1]
-      x <- x[t]-r*x[t-1]
-      
-      return(lm(y~x))
-    }
-    ```
 
     ```{r}
     #Penanganan Autokorelasi Hildreth lu
@@ -263,17 +258,17 @@ Berdasarkan uji autukorelasi dengan durbin-watson test, didapati p-value \< tara
     round(tab, 4)
     ```
 
-    Untuk mencari nilai rho yang lebih optimum, akan dilakukan pengecilan selang dan jarak antar rho. Pada proses sebelumnya, diketahui nilai rho optimum berada pada 0.9 sehingga akan dipilih rentang rho yang lebih kecil, 0.6 sampai 0.999 dengan jarak tiap nilai rho 0.001
+    Untuk mencari nilai rho yang lebih optimum, akan dilakukan pengecilan selang dan jarak antar rho. Pada proses sebelumnya, diketahui nilai rho optimum berada pada 0.1 sehingga akan dipilih rentang rho yang lebih kecil, 0.001 sampai 0.2 dengan jarak tiap nilai rho 0.001
 
     ```{r}
-    #Rho optimal di sekitar 0.9
-    rOpt <- seq(0.6,0.999, by= 0.001)
+    #Rho optimal di sekitar 0.1
+    rOpt <- seq(0.001,0.2, by= 0.001)
     tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, model))}))
     rOPTIM=tabOpt$rho[1]
     head(tabOpt[order(tabOpt$SSE),])
     ```
 
-    Setelah dilakukan pengurutan nilai rho berdasarkan SSE-nya, diketahui nilai rho dengan SSE paling kecil adalah 0.995. Selanjutnya, akan dicari model terbaiknya dengan nilai rho tersebut
+    Setelah dilakukan pengurutan nilai rho berdasarkan SSE-nya, diketahui nilai rho dengan SSE paling kecil adalah **0.139**. Selanjutnya, akan dicari model terbaiknya dengan nilai rho tersebut
 
     ```{r}
     #Model terbaik
@@ -293,8 +288,44 @@ Berdasarkan uji autukorelasi dengan durbin-watson test, didapati p-value \< tara
     data.frame(b0,b1,b2,b3)
     ```
 
+Model yang didapatkan dengan metode Hidreth-Lu adalah **y=16.35788+1.528798x1-0.824661x2+0.2925753x3**
+
 Uji DW TEST
+
+Untuk melihat keberhasilan penanganan autokorelasi dengan metode Hildreth-lu, dilakukan pengujian autokorelasi kembali menggunakan durbin watson test dengan syntax berikut
+
+H0 : Tidak ada autokorelasi vs H1 : Ada autokorelasi
 
 ```{r}
 dwtest(modelHL)
 ```
+
+Berdasarkan pengujian durbin watson test, diketahui bahwa nilai p-value yang didapatkan masih di bawah taraf alpha 5%, yaitu sebesar 2.2e-16 sehingga cukup bukti untuk menyatakan bahwa masih terdapat autokorelasi dalam model sehingga penanganan autokorelasi dengan metode Hildreth-lu masih belum tertangani.
+
+## Keakuratan Metode Cochrane-Orcutt
+
+Keakuratan Cochrane-Orcutt akan diukur berdasarkan perbandingan nilai Mean Square Error dan Sum Square Error dengan model awal
+
+```{r}
+#Model Awal
+sseModelawal <- anova(model)$`Sum Sq`[-1]
+mseModelawal <- sseModelawal/4227
+
+#Model Cochrane-Orcutt
+sseModelCO <- anova(modelCOmanual)$`Sum Sq`[-1]
+mseModelCO <- sseModelCO/4227
+
+#Perbandingan
+akurasi <- matrix(c(sseModelawal,sseModelCO,
+                    mseModelawal,mseModelCO),nrow=2,ncol=2,byrow = T)
+
+colnames(akurasi) <- c("Model Awal","Model Cochrane-Orcutt")
+row.names(akurasi) <- c("SSE","MSE")
+akurasi
+```
+
+Berdasarkan evaluasi model Cochrane-Orcutt, didapatkan nilai SSE dan MSE yang lebih baik jika dibandingkan dengan MSE dan SSE model awal
+
+## Kesimpulan
+
+Pada model regresi data m4 competition forecasting dengan peubah V2,V3,V4, dan V5, data masih mengandung nilai autokorelasi sehingga ditangani dengan metode Cochrane-Orcutt dan Hildreth-lu. Autokorelasi model berhasil tertangani dengan metode Cochrane-Orcutt dengan model akhir, yaitu y=17.16603+1.515539x1-0.8326881x2+0.3137049x3
