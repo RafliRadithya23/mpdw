@@ -1,0 +1,380 @@
+# TUGAS PRAKTIKUM 3 REGRESI DENGAN PEUBAH LAG
+
+---
+title: "M3-Regresi Peubah Lag"
+author: "Rafli Radithya"
+date: "17/9/2023"
+output: html_document
+---
+
+## Tentang Data
+
+Data yang digunakan merupakan data m4 competition forecasting yang diperoleh dari website Kaggle ([<https://www.kaggle.com/datasets/yogesh94/m4-forecasting-competition-dataset>](https://www.kaggle.com/datasets/yogesh94/m4-forecasting-competition-dataset)) dengan banyak datanya 1000 baris. Adapun daftar peubahnya terdiri dari
+
+1.  V2 = y (peubah respon)
+
+2.  V5 = x (peubah bebas)
+
+Dalam tugas ini, digunakan 2 peubah tersebut dengan V2 sebagai peubah dependen dan V5 sebagai peubah independen
+
+## Eksplorasi Data
+
+1.  Persiapan Package
+
+    ```{r}
+    library(dLagM)
+    library(dynlm)
+    library(MLmetrics)
+    library(lmtest)
+    library(car)
+    ```
+
+2.  Input data
+
+    ```{r}
+    #Akses data
+    setwd("C:/Users/USER/OneDrive/Dokumen/PRAKTIKUM MPDW 2023/PRAKTIKUM MPDW 2023/pertemuan2/data")
+    mpdw=read.csv("mpdw2v2.csv",sep=";")
+    mpdw3=as.data.frame(mpdw)
+
+    #Diambil 1000 data
+    mpdw3=mpdw3[1:1000,]
+    mpdw3
+    ```
+
+3.  Plot time series untuk setiap peubah
+
+    ```{r}
+    par(mfrow = c(1,1))
+    #V2
+    v2.ts=ts(mpdw3$V2)
+    ts.plot(v2.ts, xlab="Periode", ylab="V2", main= "Time Series Plot of V2")
+    points(v2.ts)
+
+    #V5
+    v5.ts=ts(mpdw3$V5)
+    ts.plot(v5.ts, xlab="Periode", ylab="V5", main= "Time Series Plot of V5")
+    points(v5.ts)
+    ```
+
+    Berdasarkan eksplorasi plot time series di atas, diketahui bahwa 2 peubah, yaitu V2 dan V5 memiliki pola data time series yang relatif sama, yaitu sensasional additive. Adapun ciri khas dari pola tersebut, yaitu data berfluktuasi dengan ragam yang konstan
+
+4.  Scatter plot V2 dan V5
+
+    ```{r}
+    plot(mpdw3$V2,mpdw3$V5,xlab ="V5",ylab = "V2",main="Scatter Plot V2 terhadap V5",pch=19)
+    cor(mpdw3$V2,mpdw3$V5)
+    ```
+
+    Berdasarkan scatter plot peubah V2 terhadap V5, terlihat pola tren garis lurus yang dapat diduga bahwa terdapat hubungan linier V5 terhadap V2. Hal tersebut diperkuat dengan nilai R-square yang sebesar 0.994129 yang menandakan bahwa peubah V2 dapat dijelaskan peubah V5 sebesar 99.45%
+
+## Regresi Lag dengan Model Kyock
+
+1.  Pembagian data training & testing
+
+    Dari 1000 data, akan dibagi menjadi 80% data training dan 20% data testing untuk membangun dan mengevaluasi model kyock
+
+    ```{r}
+    #Pembagian data
+    train=mpdw3[1:800,] #Data training sebanyak 800 data
+    test=mpdw3[801:1000,] #Data testing sebanyak 200 data
+
+    #Penggantian menjadi data time series
+    #data time series
+    train.ts<-ts(train)
+    test.ts<-ts(test)
+    mpdw3.ts<-ts(mpdw3)
+    ```
+
+2.  Plot data training dan testing
+
+    Untuk mencegah terjadinya overfitting data, dilakukan pencocokan data training vs testing
+
+    ```{r}
+    par(mfrow = c(1,1))
+    plot(train$V2,train$V5,xlab ="V5",ylab = "V2",main="Scatter Plot Data Training",pch=19)
+    plot(test$V2,test$V5,xlab ="V5",ylab = "V2",main="Scatter Plot Data Testing",pch=19)
+    ```
+
+    Berdasarkan scatter plot data training dan testing, kedua plot menunjukan pola tren yang sama sehingga data testing cukup baik untuk dapat digunakan mengevaluasi model nantinya
+
+3.  Pembuatan model regresi lag Kyock
+
+    ```{r}
+    #MODEL KOYCK
+    model.koyck <- koyckDlm(x=train$V2, y=train$V5)
+    summary(model.koyck)
+    aic.kyock=AIC(model.koyck)
+    bic.kyock=BIC(model.koyck)
+    ```
+
+    Berdasarkan pemodelan model Kyock, didapatkan model regresi lag, yaitu
+
+    $$
+    \hat{Y_t}=170.67852+0.94225X_t+0.03131Y_{t-1}
+    $$
+
+    Dari hasil di atas, diperoleh bahwa peubah $x_t$ dan $y_{t-1}$ memiliki nilai $P-value < 0.05$ yang berarti signifikan pada taraf 5%. Selain itu, didapatkan nilai $R-square$ sebesar 0.9956. Adapun nilai AIC yang didapatkan sebesar 11497.78 dan BIC sebesar 11516.51
+
+4.  Forecasting & akurasi model Kyock
+
+    Model yang didapat dari data training digunakan untuk forecast data testing yang sebanyak 200 periode ke depan. Selanjutnya, dari hasil forecasting, dilakukan evaluasi kebaikan model berdasarkan respon dari data testing dengan MAPE
+
+    ```{r}
+    #Forecasting MODEL KOYCK
+    fore.koyck <- forecast(model = model.koyck, x=test$V5, h=200)
+
+    #MAPE data testing
+    mape.koyck <- MAPE(fore.koyck$forecasts, test$V2)
+
+    #akurasi data training
+    MAPE_training=GoF(model.koyck)
+
+    #Hasil evaluasi
+    hasil1=data.frame(MAPE_training$MAPE,mape.koyck)
+    colnames(hasil1)<-c("MAPE Training","MAPE Testing")
+    hasil1
+    ```
+
+    Nilai MAPE data training adalah 0.08115668 sementara nilai MAPE data testing adalah 0.09595966 sehingga keduanya menunjukan nilai MAPE \<10%. Oleh karena itu, model yang didapatkan cukup baik dan tidak overfitting.
+
+## Regresi Lag dengan Distributed Lag
+
+1.  Pemodelan dengan pemilihan lag = 2
+
+    ```{r}
+    #Pemodelan lag dengan q = 2
+    model.dlm <- dlm(x = train$V5,y = train$V2 , q = 2)
+    summary(model.dlm)
+
+    #Nilai AIC dan BIC
+    aic.dlm=AIC(model.dlm)
+    bic.dlm=BIC(model.dlm)
+    ```
+
+    Model regresi distributed lag dengan pemilihan lag = 2, yaitu
+
+    $$
+    \hat{Y_t}=13.592857+0.990063X_t+0.006373X_{t-1}-0.001723X_{t-2} 
+    $$
+
+    Berdasarkan uji T, hanya peubah $x_t$ dan $x_{t-1}$ yang signifikan pada taraf 5% karena nilai $P-value$ \< 0.05. Selanjutnya, model tersebut memiliki nilai $R-square$ sebesar 0.9986. Adapun nilai AIC-nya sebesar 10548.91 dan BIC-nya 10572.32.
+
+2.  Forecasting & uji akurasi model lag = 2
+
+    Model yang didapat dari data training digunakan untuk forecast data testing yang sebanyak 200 periode ke depan. Selanjutnya, dari hasil forecasting, dilakukan evaluasi kebaikan model berdasarkan respon dari data testing dengan MAPE
+
+    ```{r}
+    #Forecasting dengan distributed lag q =2
+    fore.dlm <- forecast(model = model.dlm, x=test$V5, h=200)
+    fore.dlm
+
+    #Akurasi data testing dengan MAPE
+    mape.dlm <- MAPE(fore.dlm$forecasts, test$V2)
+
+    #Akurasi data training dengan MAPE
+    Mape_Training2=GoF(model.dlm)
+
+    #Hasil Evaluasi
+    hasil2=data.frame(Mape_Training2$MAPE,mape.dlm)
+    colnames(hasil2)<-c("MAPE Training","MAPE Testing")
+    hasil2
+    ```
+
+    Nilai MAPE data training adalah 0.01805316 sementara nilai MAPE data testing adalah 0.01679391 sehingga keduanya menunjukan nilai MAPE \<10%. Oleh karena itu, model yang didapatkan cukup baik dan tidak overfitting.
+
+3.  Pemodelan dengan pemilihan lag optimum
+
+    ```{r}
+    #penentuan lag optimum 
+    finiteDLMauto(formula = V2 ~ V5,
+                  data = data.frame(train), q.min = 1, q.max = 15,
+                  model.type = "dlm", error.type = "AIC", trace = TRUE)
+    ```
+
+    Dari tabel di atas, terlihat bahwa semakin besar q, semakin baik ukuran kebaikan model yang didapat. Hal tersebut ditandai dengan nilai AIC yang semakin menurun. Namun, penentuan q yang terlalu banyak akan menyulitkan interpretasi data sehingga dipilih nilai q optimumnya 15
+
+    ```{r}
+    #Pemodelan lag optimum, q = 15
+    model.dlm2 <- dlm(x = train$V5,y = train$V2 , q = 15)
+    summary(model.dlm2)
+    aic.dlm2=AIC(model.dlm2)
+    bic.dlm2=BIC(model.dlm2)
+    ```
+
+    Model regresi distributed lag dengan pemilihan lag = 15, yaitu
+
+    $$
+    \hat{Y_t}=25.92+0.9911X_t+0.006177X_{t-1}...+0.0002928X_{t-15} 
+    $$
+
+    Berdasarkan uji T, hanya peubah $x_t$ , $x_{t-1}$ , dan $x_{t-8}$ yang signifikan pada taraf 5% karena nilai $P-value$ \< 0.05. Selanjutnya, model tersebut memiliki nilai $R-square$ sebesar 0.9989. Adapun nilai AIC-nya sebesar 10212.38 dan BIC-nya 10296.37.
+
+4.  Forecasting & akurasi model lag optimum
+
+    Model yang didapat dari data training digunakan untuk forecast data testing yang sebanyak 200 periode ke depan. Selanjutnya, dari hasil forecasting, dilakukan evaluasi kebaikan model berdasarkan respon dari data testing dengan MAPE
+
+    ```{r}
+    #Peramalan
+    fore.dlm2 <- forecast(model = model.dlm2, x=test$V5, h=200)
+
+    #Akurasi data testing dengan MAPE
+    mape.dlm2<- MAPE(fore.dlm2$forecasts, test$V2)
+
+    #Akurasi data training dengan MAPE
+    MAPE_Training3=GoF(model.dlm2)
+
+    #Hasil Evaluasi
+    hasil3=data.frame(MAPE_Training3$MAPE,mape.dlm2)
+    colnames(hasil3)<-c("MAPE Training","MAPE Testing")
+    hasil3
+    ```
+
+    Nilai MAPE data training adalah 0.01996602 sementara nilai MAPE data testing adalah 0.02101887 sehingga keduanya menunjukan nilai MAPE \<10%. Oleh karena itu, model yang didapatkan cukup baik dan tidak overfitting.
+
+## Regresi Lag dengan Autoregresive
+
+1.  Pemodelan regresi autoregresive dengan p & q minimum, yaitu p = 1 dan q = 1
+
+    ```{r}
+    #Model autoregresive p = 1 & q = 1
+    model.ardl <- ardlDlm(x = train$V5, y = train$V2, p = 1 , q = 1)
+    summary(model.ardl)
+    aic.ardl=AIC(model.ardl)
+    bic.ardl=BIC(model.ardl)
+    ```
+
+    Model regresi distributed lag dengan pemilihan p = 1 dan q = 1, yaitu
+
+    $$
+    \hat{Y_t}=8.167045 +0.988889X_t-0.144758X_{t-1}+0.151949 Y_{t-1} 
+    $$
+
+    Berdasarkan uji T, semua peubah signifikan pada taraf 5% karena nilai $P-value$ \< 0.05. Selanjutnya, model tersebut memiliki nilai $R-square$ sebesar 0.987. Adapun nilai AIC-nya sebesar 10543.41 dan BIC-nya 10566.82.
+
+2.  Forecasting dan evaluasi model
+
+    ```{r}
+    #Forecasting
+    fore.ardl <- forecast(model = model.ardl, x=test$V5, h=200)
+
+    #Akurasi data testing dengan MAPE
+    mape.ardl<- MAPE(fore.ardl$forecasts, test$V2)
+
+    #Akurasi data training dengan MAPE
+    MAPE_Training5=GoF(model.ardl)
+
+    #Hasil Evaluasi
+    hasil5=data.frame(MAPE_Training5$MAPE,mape.ardl)
+    colnames(hasil5)<-c("MAPE Training","MAPE Testing")
+    hasil5
+    ```
+
+    Nilai MAPE data training adalah 0.01822141 sementara nilai MAPE data testing adalah 0.01717446 sehingga keduanya menunjukan nilai MAPE \<10%. Oleh karena itu, model yang didapatkan cukup baik dan tidak overfitting.
+
+3.  Penentuan nilai p dan q optimum
+
+    ```{r}
+    #Tabel AIC menurut p & q
+    model.ardl.opt <- ardlBoundOrders(data = data.frame(train), ic = "AIC", formula = V2 ~ V5 )
+    model.ardl.opt
+    ```
+
+    ```{r}
+    #Pemilihan p & q optimum
+    min_p=c()
+    for(i in 1:15){
+      min_p[i]=min(model.ardl.opt$Stat.table[[i]])
+    }
+    q_opt=which(min_p==min(min_p, na.rm = TRUE))
+    p_opt=which(model.ardl.opt$Stat.table[[q_opt]] == 
+                  min(model.ardl.opt$Stat.table[[q_opt]], na.rm = TRUE))
+    data.frame("q optimum" = q_opt, "p optimum" = p_opt, 
+               "AIC"=model.ardl.opt$min.Stat)
+    ```
+
+    Berdasarkan tabel p dan q, nilai AIC yang paling kecil terjadi saat p = 7 dan q = 15 sehingga dipilih nilai p & q tersebut sebagai nilai optimumnya
+
+4.  Pemodelan autoregresive dengan p = 7 dan q =15
+
+    ```{r}
+    model.ardl2 = ardlDlm(x = train$V5, y = train$V2, p = 7, q = 15)
+    summary(model.ardl2)
+    aic.ardl2=AIC(model.ardl2)
+    bic.ardl2=BIC(model.ardl2)
+    ```
+
+    Model regresi autoregresive dengan pemilihan p = 7 dan q = 15, yaitu
+
+    $$
+    \hat{Y_t}=16.10+(0.9908X_t-0.1452X_{t-1}...-0.04743X_{t-7})+
+    (0.1523Y_t+0.1279Y_{t-1}...+0.0000636Y_{t-15}) 
+    $$
+
+    Berdasarkan uji T, hanya peubah $x_t$ , $x_{t-1}$ , $x_{t-2}$ , $y_{t-1}$ , $y_{t-2}$ , $y_{t-8}$ , dan $y_{t-11}$ yang signifikan pada taraf 5% karena nilai $P-value$ \< 0.05. Selanjutnya, model tersebut memiliki nilai $R-square$ sebesar 0.999. Adapun nilai AIC-nya sebesar 10168.79 dan BIC-nya 10285.43.
+
+5.  Forecasting dan evaluasi model
+
+    Model yang didapat dari data training digunakan untuk forecast data testing yang sebanyak 200 periode ke depan. Selanjutnya, dari hasil forecasting, dilakukan evaluasi kebaikan model berdasarkan respon dari data testing dengan MAPE
+
+    ```{r}
+    #Peramalan
+    fore.ardl2 <- forecast(model = model.ardl2, x=test$V5, h=200)
+
+    #Akurasi data testing dengan MAPE
+    mape.ardl2<- MAPE(fore.ardl2$forecasts, test$V2)
+
+    #Akurasi data training dengan MAPE
+    MAPE_Training4=GoF(model.ardl2)
+
+    #Hasil Evaluasi
+    hasil4=data.frame(MAPE_Training4$MAPE,mape.ardl2)
+    colnames(hasil4)<-c("MAPE Training","MAPE Testing")
+    hasil4
+    ```
+
+    Nilai MAPE data training adalah 0.02044235 sementara nilai MAPE data testing adalah 0.02008119 sehingga keduanya menunjukan nilai MAPE \<10%. Oleh karena itu, model yang didapatkan cukup baik dan tidak overfitting.
+
+## Perbandingan Model Lag
+
+1.  Pembuatan tabel perbandingan nilai MAPE, AIC, dan BIC
+
+    ```{r}
+    #tabel akurasi
+    akurasi2=matrix(c(mape.koyck,mape.dlm,mape.dlm2,mape.ardl,mape.ardl2,aic.kyock,aic.dlm,aic.dlm2,aic.ardl,aic.ardl2,bic.kyock,bic.dlm2,bic.ardl2),byrow=FALSE,ncol=3)
+    akurasi2=as.data.frame(akurasi2)
+    rownames(akurasi2)=c("Koyck","Distributed Lag (q=2)","Distributed Lag Optimum","Autoregresive (p=1 & q=1)","Autoregresive Optimum")
+    colnames(akurasi2)=c("MAPE","AIC","BIC")
+    akurasi2
+    ```
+
+    Berdasarkan tabel akurasi, diketahui bahwa nilai MAPE terkecil adalah model Distributed Lag dengan q=2, tetapi nilai AIC terkecil adalah model autoregresive optimum. Oleh karena itu, dipilih model terbaiknya autoregresive optimum dengan modelnya, yaitu
+
+    $$
+    \hat{Y_t}=16.10+(0.9908X_t-0.1452X_{t-1}...-0.04743X_{t-7})+
+    (0.1523Y_t+0.1279Y_{t-1}...+0.0000636Y_{t-15}) 
+    $$
+
+2.  Plot Perbandingan Model Ramalan vs Aktual
+
+    ```{r}
+    par(mfrow=c(1,1))
+    plot(1:nrow(test), test$V2, type="b", col="black",xlab="Periode",ylab = "V2",
+         main="Perbandingan Ramalan vs Aktual")
+    points(1:nrow(test), test$V2,col="black",pch=19)
+    lines(1:nrow(test), test$V2,col="black")
+    points(1:nrow(test), fore.koyck$forecasts,col="blue",pch=19)
+    lines(1:nrow(test), fore.koyck$forecasts,col="blue")
+    points(1:nrow(test), fore.dlm$forecasts,col="red",pch=19)
+    lines(1:nrow(test), fore.dlm$forecasts,col="red")
+    points(1:nrow(test), fore.dlm2$forecasts,col="orange",pch=19)
+    lines(1:nrow(test), fore.dlm2$forecasts,col="orange")
+    points(1:nrow(test), fore.ardl$forecasts,col="green",pch=19)
+    lines(1:nrow(test), fore.ardl$forecasts,col="green")
+    points(1:nrow(test), fore.ardl2$forecasts,col="grey",pch=19)
+    lines(1:nrow(test), fore.ardl2$forecasts,col="grey")
+    legend("bottomright",c("data aktual", "Koyck", "DLM", "DLM Optimum", "Autoregressive", "Autoregressive Optimum"), lty=1, cex=.40,
+           col=c("black", "blue", "red", "orange", "green", "grey"))
+    ```
+
+    Berdasarkan plot perbandingan model forecasting vs aktual untuk berbagai model, terlihat bahwa forecasting model autoregresive cenderung lebih menyesuaikan data test aktual. Oleh karena itu, dipilih model terbaiknya autoregresive
