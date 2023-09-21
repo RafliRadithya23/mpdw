@@ -1,0 +1,347 @@
+# Praktikum 4 - Data ARMA
+
+---
+title: "M4-Data AR MA manual"
+author: "Rafli Radithya"
+date: "21/9/2023"
+output: html_document
+---
+
+## Data Random
+
+Pembangkitan data dari sebaran normal dengan set.seed (044)
+
+```{r cars}
+#Data White Noise
+wn <- rnorm(300)
+ts.plot(wn)
+```
+
+```{r}
+#Pembangkitan data
+set.seed(044)
+ma2<-wn[c(1,2)]
+ma2
+```
+
+## Pencarian Nilai MA(2)
+
+Akan dicoba membangkitkan proses MA paling sederhana, yaitu MA(1) dengan $\theta = 0.4$ dan $\theta = 0.6$ sebanyak 300 observasi dan $c=0$. Karena diperlukan satu nilai awal untuk $e_{t-2}$, masukkan nilai pertama white noise sebagai nilai awal tersebut.
+
+```{r}
+for(i in 3:300){
+   ma2[i] <- wn[i] + 0.4 * wn[i - 1] + 0.6 * wn[i - 2]
+}
+ma2
+```
+
+Selain menggunakan cara di atas, pembangkitan proses MA(2) dapat dilakukan dengan fungsi `arima.sim()` sebagai berikut.
+
+```{r}
+ma22 <- arima.sim(list(order=c(0,0,2), ma=c(0.4,0.6)), n=300)
+ma22
+```
+
+## Eksplorasi Karakteristik Data MA(2)
+
+1.  Plot time series
+
+    ```{r}
+    ts.plot(ma2)
+    ```
+
+    Berdasarkan plot time series, terlihat bahwa data MA(2) yang dibangkitkan stasioner dalam rataan
+
+2.  Plot ACF
+
+    ```{r}
+    acf(ma2,lag.max = 20)
+    ```
+
+    Berdasarkan plot AFC tersebut, terlihat bahwa plot ACF *cuts off* di lag pertama dan kedua. Hal ini terlihat nilai observasi di luar rentang batas
+
+3.  Plot PACF
+
+    ```{r}
+    pacf(ma2)
+    ```
+
+    Berdasarkan plot PACF tersebut, terlihat bahwa plot PACF cenderung *tails off* dan membentuk gelombang sinus
+
+4.  Plot EACF
+
+    ```{r}
+    TSA::eacf(ma2)
+    ```
+
+    Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(0) dan ordo MA(1)
+
+5.  Scatter plot lag yt dan yt-1 dan korelasi
+
+    ```{r}
+    #Yt
+    yt_ma <- ma2[-1]
+    yt_ma
+    #Yt-1
+    yt_1_ma <- ma2[-300]
+    yt_1_ma
+    #Plot
+    plot(y=yt_ma,x=yt_1_ma)
+    #Korelaso
+    cor(yt_ma,yt_1_ma)
+    ```
+
+    Berdasarkan plot, diatas, terlihat hubungan yt dan yt-1 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar 0.3722444.
+
+6.  Scatter plot lag yt dan yt-2
+
+    ```{r}
+    #Yt
+    yt_ma2 <- ma2[-c(1,2)]
+    yt_ma2
+    #Yt-2
+    yt_2_ma <- ma2[-c(299,300)]
+    yt_2_ma
+    #Plot
+    plot(y=yt_ma2,x=yt_2_ma)
+    #Korelaso
+    cor(yt_ma2,yt_2_ma)
+    ```
+
+    Berdasarkan plot, diatas, terlihat hubungan yt dan yt-2 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar 0.3514784.
+
+7.  Scatter plot lag yt dan yt-3
+
+```{r}
+#Yt
+yt_ma3 <- ma2[-c(1,2,3)]
+yt_ma3
+#Yt-2
+yt_3_ma <- ma2[-c(298,299,300)]
+yt_3_ma
+#Plot
+plot(y=yt_ma3,x=yt_3_ma)
+#Korelaso
+cor(yt_ma3,yt_3_ma)
+```
+
+Berdasarkan plot, diatas, terlihat hubungan yt dan yt-3 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar -0.05444833.
+
+## Pembangkitan Data AR(2)
+
+Akan dicoba membangkitkan proses AR (2), yaitu dengan $\phi_1= 0.3$ dan $\phi_2= 0.7$ sebanyak 300 observasi dan $c=0$.
+
+```{r}
+#Bangkitkan data
+set.seed(044)
+#Bangkitkan data AR(2)
+n<-length(wn)
+n
+ar <- c(1:n) 
+for (i in 3:n) {ar[i]<-wn[i]+0.5*ar[i-1]+0.2*ar[i-2]}
+ar
+```
+
+Selain menggunakan cara di atas, pembangkitan proses AR dapat dilakukan dengan fungsi `arima.sim()` sebagai berikut.
+
+```{r}
+#Rumus
+ar1 <- arima.sim(list(order=c(2,0,0), ar=c(0.5,0.2)), n=300)
+ar1
+```
+
+## Eksplorasi Karakteristik AR(2)
+
+1.  Plot Time Series
+
+    ```{r}
+    ts.plot(ar)
+    ```
+
+    Berdasarkan plot time series tersebut terlihat bahwa data cenderung stasioner pada rataan
+
+2.  Plot ACF
+
+    ```{r}
+    acf(ar)
+    ```
+
+    Berdasarkan plot ACF tersebut terlihat bahwa plot ACF cenderung *tails off* dan cenderung membentuk pola grafik sinus.
+
+3.  Plot PACF
+
+    ```{r}
+    pacf(ar)
+    ```
+
+    Berdasarkan plot PACF tersebut, terlihat bahwa plot PACF *cuts off* pada lag pertama dan kedua.
+
+4.  Plot EACF
+
+    ```{r}
+    TSA::eacf(ar)
+    ```
+
+    Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(1) dan ordo MA(0)
+
+5.  Scatter plot dan korelasi yt dan yt-1
+
+    ```{r}
+    #Yt
+    yt_ar <- ar[-1]
+    #Yt-1
+    yt_1_ar <- ar[-300]
+    #Plot
+    plot(y=yt_ar,x=yt_1_ar)
+    #Korelasi
+    cor(yt_ar,yt_1_ar)
+    ```
+
+    Berdasarkan plot, diatas, terlihat hubungan yt dan yt-1 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar 0.5549368.
+
+6.  Scatter plot yt dan yt-2 serta korelasinya
+
+    ```{r}
+    #Yt
+    yt_ar2 <- ar[-c(1,2)]
+    #Yt-2
+    yt_2_ar <- ar[-c(299,300)]
+    #Plot
+    plot(y=yt_ar2,x=yt_2_ar)
+    #Korelasi
+    cor(yt_ar2,yt_2_ar)
+    ```
+
+    Berdasarkan plot, diatas, terlihat hubungan yt dan yt-2 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar 0.4410224.
+
+7.  Scatter plot yt dan yt-3 serta korelasinya
+
+    ```{r}
+    #Yt
+    yt_ar3 <- ar[-c(1,2,3)]
+    #Yt-3
+    yt_3_ar <- ar[-c(298,299,300)]
+    #Plot
+    plot(y=yt_ar3,x=yt_3_ar)
+    #Korelasi
+    cor(yt_ar3,yt_3_ar)
+    ```
+
+    Berdasarkan plot, diatas, terlihat hubungan yt dan yt-2 cenderung berbentuk tren positif. Adapun korelasi yang didapatkan sebesar 0.3086429.
+
+## Pembangkitan data ARMA(2,2)
+
+Pembaktian data ARMA(2,2) berbeda secara sgnifikan bitu yak
+
+```{r}
+set.seed(044)
+n = length(wn)
+phi1 = 0.6
+phi2 = 0.4
+theta1 = 0.5
+theta2 = 0.2
+
+y.arma=c(1:n)
+for (i in 3:n) {y.arma[i] <- phi1 * y.arma[i-1] + phi2 * y.arma[i-2] + theta1 * wn[i-1] + theta2 * wn[i-2] + wn[i]}
+y.arma
+```
+
+Pembangkita dana secara otomatis rumua
+
+```{r}
+arma11 <- arima.sim(list(order=c(1,0,1), ar = 0.7, ma = 0.5), n=300)
+arma11
+```
+
+## Karakteristik ARMA (2,2)
+
+1.  Plot Time Series
+
+    ```{r}
+    par(mfrow = c(1, 2))
+    ts.plot(y.arma)
+    ts.plot(arma11)
+    par(mfrow = c(1, 1))
+    ```
+
+    Berdasarkan plot time series tersebut, terlihat bahwa model ARMA(2,2) cenderung stasioner dalam rataan
+
+2.  Plot ACF
+
+    ```{r}
+    par(mfrow = c(1, 2))
+    acf(y.arma)
+    acf(arma11)
+    par(mfrow = c(1, 1))
+    ```
+
+    Berdasarkan plot ACF tersebut, terlihat bahwa model ARMA(2,2) hasil simulasi memiliki plot ACF yang *tails off*,
+
+3.  Plot PACF
+
+    ```{r}
+    par(mfrow = c(1, 2))
+    pacf(y.arma)
+    pacf(arma11)
+    par(mfrow = c(1, 1))
+    ```
+
+    Berdasarkan plot ACF tersebut, terlihat bahwa model ARMA(2,2) hasil simulasi memiliki plot ACF yang *tails off*,
+
+4.  Plot EACF
+
+    ```{r}
+    TSA::eacf(y.arma)
+    TSA::eacf(arma11)
+    ```
+
+5.  Scatter plot Yt dan Yt-1 dan korelasinya
+
+    ```{r}
+    #Yt
+    yt_arma <- arma11[-1]
+    yt_arma
+    #Yt-1
+    yt_1_arma <- arma11[-300]
+    yt_1_arma
+    #Plot
+    plot(y=yt_arma,x=yt_1_arma)
+    #Korelasi
+    cor(yt_arma,yt_1_arma)
+    ```
+
+    Berdasarkan plot tersebut, terlihat hubungan tren positif antara Yt dan Yt-1. Adapun korelasi yang didapatkan sebesar 0.7999012.
+
+6.  Scatter Yt dan Yt-2 dan korelasinya
+
+    ```{r}
+    #Yt
+    yt_arma2 <- arma11[-c(1,2)]
+    yt_arma2
+    #Yt-2
+    yt_2_arma <- arma11[-c(299,300)]
+    yt_2_arma
+    #Plot
+    plot(y=yt_arma2,x=yt_2_arma)
+    #Korelasi
+    cor(yt_arma2,yt_2_arma)
+    ```
+
+    Berdasarkan plot tersebut, terlihat hubungan tren positif antara Yt dan Yt-2. Adapun korelasi yang didapatkan sebesar 0.5165463.
+
+7.  Scatter Yt dan Yt-3 dan korelasinya
+
+    ```{r}
+    #Yt
+    yt_arma3 <- arma11[-c(1,2,3)]
+    yt_arma3
+    #Yt-3
+    yt_3_arma <- arma11[-c(298,299,300)]
+    yt_3_arma
+    #Plot
+    plot(y=yt_arma3,x=yt_3_arma)
+    #Korelasi
+    cor(yt_arma3,yt_3_arma)
+    ```
+
+    Berdasarkan plot tersebut, terlihat hubungan tren positif antara Yt dan Yt-3. Adapun korelasi yang didapatkan sebesar 0.3276062.
