@@ -1,0 +1,217 @@
+# TUGAS M5 - DATA TIDAK STASIONER
+
+---
+title: "M5-Data Tidak Stasioner"
+author: "Rafli Radithya"
+date: "26/9/2023"
+output: html_document
+---
+
+## Tentang Data
+
+Data yang digunakan merupakan data pertemuan 1 yaitu m4 data competition. Adapun data yang diambil pada peubah V2 sebanyak 300 data
+
+## Package
+
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+```
+
+## Input Data
+
+```{r cars}
+#Akses data
+setwd("C:/Users/USER/OneDrive/Dokumen/PRAKTIKUM MPDW 2023/PRAKTIKUM MPDW 2023/pertemuan2/data")
+mpdw=read.csv("mpdw2v2.csv",sep=";")
+mpdw5=as.data.frame(mpdw)
+
+#Diambil 300 data
+mpdw5=mpdw3[1:300,]
+mpdw5
+```
+
+## Eksplorasi Data
+
+Plot Time Series dari data peubah V2 sebagai berikut
+
+```{r}
+#V2
+v2.ts=ts(mpdw5$V2)
+ts.plot(v2.ts, xlab="Periode", ylab="V2", main= "Time Series Plot of V2")
+points(v2.ts)
+```
+
+Berdasarkan plot di atas, pola data cenderung bergerak di sekitar nilai tertentu dengan lebar pita pola data yang fluktuatif.
+
+## Pengecekan Kestasioneran Data V2
+
+1.  Plot ACF
+
+    ```{r}
+    #Plot ACF
+    acf(mpdw5$V2,lag.max=50)
+    ```
+
+    Berdasarkan plot ACF, pola data terlihat tails off slowly. Data mulai memasuki rentang pada lag 35 sehingga diduga bahwa pola data V2 tidak stasioner dalam rataan
+
+2.  Stasioner dalam rataan
+
+    Pengujian formal kestasioneran data menurut rataan dengan metode Augmented Dickey-Fuller Test. Adapun hipotesisnya sebagai berikut
+
+    $H_0$ : Data Tidak Stasioner
+
+    $H_1$ : Data Stasioner
+
+    ```{r}
+    #ADF test
+    tseries::adf.test(mpdw5$V2)
+    ```
+
+    Berdasarkan nilai P- Value dari Augmented Dickey-Fuller Test, didapatkan $p-value>a_{0.05}$ sehingga belum cukup bukti untuk menolak $H_0$ yang berarti data tidak stasioner
+
+3.  Stasioner dalam ragam
+
+    Kestasioneran data menurut ragam, dapat dilihat secara eksplorasi dengan plot box-cox sebagai berikut
+
+    ```{r}
+    #Box-Cox Plot
+    index <- seq(1:300)
+    bc = boxcox(mpdw5$V2~index, lambda = seq(-2,6,by=0.01))
+    #Nilai Rounded Lambda
+    lambda <- bc$x[which.max(bc$y)]
+    lambda
+    #SK
+    bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+    ```
+
+    Berdasarkan plot box-cox, didapatkan bahwa nilai $\lambda$ optimumnya sebesar -0.18. Adapun Selang Kepercayaan 95% di antara -0.32 dan -0.04 yang berarti tidak memuat nilai 1 sehingga data tidak stasioner dalam ragam
+
+## Pengecekan Kestasioneran Data Partisi 1 V2
+
+Data V2 akan dipartisi hingga data ke-90 saja yang selanjutnya akan dicek kestasionerannya
+
+1.  Plot TS
+
+    ```{r}
+    #Partisi data
+    mpdw6=mpdw5[1:90,1]
+
+    #Plot TS
+    v3.ts=ts(mpdw6)
+    ts.plot(v3.ts, xlab="Period", ylab="V2", main= "Time Series Plot 90 of V2's Data ")
+    points(v3.ts)
+    ```
+
+    Berdasarkan plot di atas, pola data cenderung bergerak di sekitar nilai tertentu dengan lebar pita pola data yang fluktuatif.
+
+2.  Plot ACF
+
+    ```{r}
+    #Plot ACF
+    acf(mpdw6,lag.max=20)
+    ```
+
+    Berdasarkan plot ACF, terlihat bahwa data berpola tail-off secara cepat sehingga dapat diduga bahwa data stasioner
+
+3.  Stasioner dalam rataan
+
+    Pengujian formal kestasioneran data menurut rataan dengan metode Augmented Dickey-Fuller Test. Adapun hipotesisnya sebagai berikut
+
+    $H_0$ : Data Tidak Stasioner dalam rataan
+
+    $H_1$ : Data Stasioner
+
+    ```{r}
+    #ADF test
+    tseries::adf.test(mpdw6)
+    ```
+
+    Berdasarkan nilai P- Value dari Augmented Dickey-Fuller Test, didapatkan $p-value<a_{0.05}$ sehingga cukup bukti untuk menolak $H_0$ yang berarti data stasioner menurut rataan
+
+4.  Plot Box-Cox
+
+    Kestasioneran data menurut ragam, dapat dilihat secara eksplorasi dengan plot box-cox sebagai berikut
+
+    ```{r}
+    #Box-Cox Plot
+    index <- seq(1:90)
+    bc = boxcox(mpdw6~index, lambda = seq(-4,4,by=0.01))
+    #Nilai Rounded Lambda
+    lambda <- bc$x[which.max(bc$y)]
+    lambda
+    #SK
+    bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+    ```
+
+    Berdasarkan plot box-cox, didapatkan bahwa nilai $\lambda$ optimumnya sebesar -0.04. Adapun Selang Kepercayaan 95% di antara -0.29 dan 0.22 yang berarti tidak memuat nilai 1 sehingga data tidak stasioner menurut ragam
+
+## Pengecekan Kestasioneran Data Partisi 2 V2
+
+Data V2 akan dipartisi hingga data ke-230 saja yang selanjutnya akan dicek kestasionerannya
+
+1.  Plot TS
+
+    ```{r}
+    #Partisi data
+    mpdw7=mpdw5[1:230,1]
+
+    #Plot TS
+    v3.ts=ts(mpdw7)
+    ts.plot(v3.ts, xlab="Period", ylab="V2", main= "Time Series Plot 230 of V2's Data ")
+    points(v3.ts)
+    ```
+
+    Berdasarkan plot di atas, pola data cenderung bergerak di sekitar nilai tertentu dengan lebar pita pola data yang fluktuatif.
+
+2.  Plot ACF
+
+    ```{r}
+    acf(mpdw7)
+    ```
+
+    Berdasarkan pola ACF, autokorelasi antar sisaan cenderung berpola tail off slowly sehingga dapat diduga bahwa data stasioner.
+
+3.  Kestasioneran dalam rataan
+
+    Pengujian formal kestasioneran data menurut rataan dengan metode Augmented Dickey-Fuller Test. Adapun hipotesisnya sebagai berikut
+
+    $H_0$ : Data Tidak Stasioner dalam rataan
+
+    $H_1$ : Data Stasioner dalam rataan
+
+    ```{r}
+    #ADF test
+    tseries::adf.test(mpdw7)
+    ```
+
+    Berdasarkan nilai P- Value dari Augmented Dickey-Fuller Test, didapatkan $p-value<a_{0.05}$ sehingga cukup bukti untuk menolak $H_0$ yang berarti data stasioner menurut rataan
+
+4.  Kestasioneran dalam ragam
+
+    Kestasioneran dalam ragam dapat dilihat dengan plot box-cox sebagai berikut
+
+    ```{r}
+    #Box-Cox Plot
+    index <- seq(1:230)
+    bc = boxcox(mpdw7~index, lambda = seq(-4,4,by=0.01))
+    #Nilai Rounded Lambda
+    lambda <- bc$x[which.max(bc$y)]
+    lambda
+    #SK
+    bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+    ```
+
+    Berdasarkan plot box-cox, didapatkan bahwa nilai $\lambda$ optimumnya sebesar 0.13. Adapun Selang Kepercayaan 95% di antara -0.03 dan 0.28 yang berarti tidak memuat nilai 1 sehingga data tidak stasioner menurut ragam
+
+## Kesimpulan
+
+Berdasarkan pengecekan kestasioneran data V2, didapatkan beberapa kesimpulan, yaitu
+
+1.  Data V2 tidak stasioner baik menurut ragam, maupun rataannya
+
+2.  Data partisi V2 yang merupakan data periode 1 hingga 90 menunjukan stasioner menurut rataan, tetapi tidak dengan ragam
+
+3.  Data partisi V2 yang merupakan data periode 1 hingga 230 menunjukan stasioner menurut rataan, tetapi tidak dengan ragam
