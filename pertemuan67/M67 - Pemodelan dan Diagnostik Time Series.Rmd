@@ -1,0 +1,284 @@
+---
+title: "M6 - Diagnostik Model"
+author: "Rafli Radithya"
+date: "15/10/2023"
+output: html_document
+---
+
+## Tentang Data
+
+Data yang digunakan merupakan data pertemuan 1 yaitu m4 data competition. Adapun data yang diambil pada peubah V2 sebanyak 150 data
+
+## Input Data
+
+```{r cars}
+#Akses data
+setwd("C:/Users/USER/OneDrive/Dokumen/PRAKTIKUM MPDW 2023/PRAKTIKUM MPDW 2023/pertemuan2/data")
+mpdw=read.csv("mpdw2v2.csv",sep=";")
+mpdw6=as.data.frame(mpdw)
+
+#Diambil 300 data 
+mpdw6=mpdw3[1:150,]
+mpdw6=as.data.frame(mpdw6)
+mpdw6
+```
+
+## Package
+
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+library(forecast)
+library(TSA)
+library(TTR)
+library(aTSA)
+library(graphics)
+```
+
+## Eksplorasi Data Latih + Uji
+
+Sebelumnya, akan dilakukan pembagian 80% data training dan 20% data testing dari 150 data yang ada
+
+```{r}
+#Training
+mpdw.train = mpdw6[1:round(150*0.8),]
+mpdw.train = ts(mpdw.train$V2)
+
+#Testing
+mpdw.test = mpdw6[1+round(150*0.8):150,]
+mpdw.test = ts(mpdw.test$V2)
+
+#Eksplorasi 
+par(mfrow=c(1,1))
+#Data Training
+ts.plot(mpdw.train, xlab="Time", ylab="V2", main= "Time Series Plot of Training")
+points(mpdw.train)
+#Data Testing
+ts.plot(mpdw.test, xlab="Time", ylab="V2", main= "Time Series Plot of Testing")
+points(mpdw.test)
+```
+
+Data training dan testing cenderung membentuk pola time series yang mirip, yaitu stasioner dalam rataan, tetapi tidak dalam ragam sehingga data tidak overfitting.
+
+## Uji Stasioneritas Data
+
+Dilakukan eksplorasi data dengan plot ACF untuk melihat pola lag pada data
+
+```{r}
+#Plot ACF
+acf(mpdw.train,lag.max = 20)
+```
+
+Berdasarkan plot ACF, terjadi cut-off pada lag 2 sehingga diduga data stasioner dalam rataan. Selanjutnya, akan dilakukan uji formalnya dengan uji ADF dengan hipotesis sebagai berikut
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+```{r}
+#ADF
+tseries::adf.test(mpdw.train)
+```
+
+Nilai P-value yang didapatkan lebih kecil dari taraf nyata 5%, yaitu 0.01 sehingga menolak hipotesis H0 atau dengan kata lain, data sudah stasioner dalam rataan
+
+Selanjutnya, dilakukan pengujian stasioneritas dalam ragam dengan plot Box-Cox
+
+```{r}
+index <- seq(1:120)
+bc = boxcox(mpdw.train~index, lambda = seq(-2,2,by=0.1))
+#Nilai Rounded Lambda
+lambda <- bc$x[which.max(bc$y)]
+lambda
+#SK
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
+
+Berdasarkan plot box-cox, nilai lamda berkisar -0.26 hingga 0.1414 atau dengan kata lain tidak mencangkup nilai 1 sehingga data tidak stasioner dalam ragam. Adapun nilai lamda optimumnya sebesar -0.0606
+
+```{r}
+#Transformasi
+
+```
+
+## Spesifikasi Model
+
+```{r}
+par(mfrow=c(1,3))
+#Plot ACF
+acf(mpdw.train,lag.max = 20)
+
+#Plot PACF
+pacf(mpdw.train,lag.max = 20)
+
+#Plot EACF
+eacf(mpdw.train)
+```
+
+Berdasarkan gambar ACF dan PACF, diketahui bahwa pada lag 2 data terjadi cut-off sehingga dapat diduga modelnya mengikuti ARIMA (0,0,2) dan ARIMA (2,0,0). Selain itu pada plot EACF, terdapat dugaan model lain dengan melihat ujung segitiga berlambang 'o', yaitu ARIMA (1,0,2) dan ARIMA (2,0,2)
+
+## Pendugaan Parameter
+
+Dari 4 model tentatif yang didapat, akan dipilih yang terbaik berdasarkan AIC model dan signifikansi parameternya
+
+```{r}
+#ARIMA (0,0,2)
+model1=Arima(mpdw.train, order=c(0,0,2),method="ML")
+summary(model1) 
+lmtest::coeftest(model1)
+
+#ARIMA (2,0,0)
+model2=Arima(mpdw.train, order=c(2,0,0),method="ML")
+summary(model2) 
+lmtest::coeftest(model2)
+
+#ARIMA (1,0,2)
+model3=Arima(mpdw.train, order=c(1,0,2),method="ML")
+summary(model3) 
+lmtest::coeftest(model3)
+
+#ARIMA (2,0,2)
+model4=Arima(mpdw.train, order=c(2,0,2),method="ML")
+summary(model4) 
+lmtest::coeftest(model4)
+
+```
+
+Berdasarkan uji signifikansi parameter, diketahui bahwa semua model mengandung parameter yang tidak signifikan. Adapun model dengan AIC terkecil pada ARIMA (2,0,0) sehingga dipilih model terbaiknya adalah ARIMA (2,0,0).
+
+## Eksplorasi Sisaan
+
+```{r}
+#Eksplorasi 
+sisaan.da <- model2$residuals 
+par(mfrow=c(2,2))
+
+#Q-Q plot
+qqnorm(sisaan.da) 
+qqline(sisaan.da, col = "blue", lwd = 2)
+
+#Plot Sisaan
+plot(c(1:length(sisaan.da)),sisaan.da) 
+
+#Plot ACF
+acf(sisaan.da)
+
+#Plot PACF
+pacf(sisaan.da) 
+par(mfrow = c(1,1))
+```
+
+Berdasarkan plot kuantil-kuantil normal, secara eksplorasi ditunjukkan sisaan tidak menyebar normal ditandai dengan titik titik yang cenderung tidak mengikuti garis $45^{\circ}$. Kemudian dapat dilihat juga lebar pita sisaan yang cenderung tidak sama menandakan bahwa sisaan memiliki ragam yang heterogen. Plot ACF dan PACF sisaan ARIMA(2,0,0) juga tidak signifikan pada 20 lag awal yang menandakan saling bebas. Kondisi ini akan diuji lebih lanjut dengan uji formal.
+
+## Uji Formal
+
+1.  Kenormalan sisaan
+
+    ```{r}
+    #1) Sisaan Menyebar Normal 
+    ks.test(sisaan.da,"pnorm")
+    ```
+
+    Hipotesis pada uji KS adalah sebagai berikut.
+
+    $H_0$ : Sisaan menyebar normal
+
+    $H_1$ : Sisaan tidak menyebar normal
+
+    Berdasarkan uji KS tersebut, didapat \*p-value\* sebesar \< 2.2e-16 yang kurang dari taraf nyata 5% sehingga tolak $H_0$ dan menandakan bahwa sisaan tidak menyebar normal. Hal ini sesuai dengan hasil eksplorasi menggunakan plot kuantil-kuantil normal.
+
+2.  Autokorelasi sisaan
+
+    ```{r}
+    Box.test(sisaan.da, type = "Ljung")
+    ```
+
+    Hipotesis yang digunakan adalah sebagai berikut.
+
+    $H_0$ : Sisaan saling bebas
+
+    $H_1$ : Sisaan tidak tidak saling bebas
+
+    Berdasarkan uji Ljung-Box tersebut, didapat \*p-value\* sebesar 0.8182 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa sisaan saling bebas.
+
+3.  Homogenitas sisaan
+
+    ```{r}
+    Box.test((sisaan.da)^2, type = "Ljung")
+    ```
+
+    Hipotesis yang digunakan untuk uji kehomogenan ragam adalah sebagai berikut.
+
+    $H_0$ : Ragam sisaan homogen
+
+    $H_1$ : Ragam sisaan tidak homogen
+
+    Berdasarkan uji Ljung-Box terhadap sisaan kuadrat tersebut, didapat \*p-value\* sebesar 0.1261 yang lebih dari taraf nyata 5% sehingga tak tolak \$H_0\$ dan menandakan bahwa ragam sisaan homogen. Hal ini berbeda dengan eksplorasi
+
+4.  Nilai harapan = 0
+
+    ```{r}
+    t.test(sisaan.da, mu = 0, conf.level = 0.95)
+    ```
+
+    Hipotesis yang diujikan sebagai berikut :
+
+    $H_0$ : nilai tengah sisaan sama dengan 0
+
+    $H_1$ : nilai tengah sisaan tidak sama dengan 0
+
+    Berdasarkan uji-ttersebut, didapat \*p-value\* sebesar 0.9752 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa nilai tengah sisaan sama dengan nol.
+
+## Uji Overfitting
+
+Karena model terbaik sementara yang didapatkan adalah ARIMA (2,0,0), akan dilakukan tahapan uji overfitting terhadap model ARIMA (2,0,1) dan ARIMA (3,0,0)
+
+```{r}
+#ARIMA (2,0,0)
+model2=Arima(mpdw.train, order=c(2,0,0),method="ML")
+summary(model2) 
+lmtest::coeftest(model2)
+
+#ARIMA (2,0,1)
+model1.ovt=Arima(mpdw.train, order=c(2,0,1),method="ML")
+summary(model1.ovt) 
+lmtest::coeftest(model1.ovt)
+
+#ARIMA (3,0,0)
+model2.ovt=Arima(mpdw.train, order=c(3,0,0),method="ML")
+summary(model2.ovt) 
+lmtest::coeftest(model2.ovt)
+```
+
+Jika dibandingkan dengan ARIMA (2,0,1) dan ARIMA (3,0,0), model ARIMA (2,0,0) tetap memiliki nilai AIC yang terkecil sehingga dipilih model ARIMA (2,0,0) untuk forecasting
+
+## Forecasting
+
+Forecasting dilakukan dengan meramal data pada 30 periode kedepan dari data trainingnya
+
+```{r}
+ramalan <- forecast::forecast(model2, h = 30) 
+ramalan
+data.ramalan.da <- ramalan$mean
+plot(ramalan)
+```
+
+Berdasarkan forecasting, data ramalan cenderung menurun pada awal periode hingga akhirnya stabil di akhir periode
+
+## Akurasi Ramalan
+
+Akurasi ramalan tersebut dinilai berdasarkan perbandingan nilai ramalan terhadap data testing yang telah dibagi sebelumnya
+
+```{r}
+perbandingan<-matrix(data=c(mpdw6[121:150,1], data.ramalan.da),
+                     nrow = 30, ncol = 2)
+colnames(perbandingan)<-c("Aktual","Hasil Forecast")
+perbandingan
+accuracy(data.ramalan.da,mpdw6[121:150,1])
+
+#Note : mpdw6[121:150,1] merupakan data testing
+```
+
+Nilai akurasi forecasting diukur berdasarkan nilai MAPE dan RMSE. Adapun nilai MAPE yang didapatkan sebesar 164.9973 dan RMSE sebesar 4128.341
