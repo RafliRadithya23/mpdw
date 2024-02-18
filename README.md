@@ -1,5 +1,5 @@
-# Praktikum MPDW
-Dokumentasi praktikum selama praktikum mpdw
+# Praktikum MPDW 
+Dokumentasi revisi praktikum selama praktikum mpdw
 --
 Pada repository ini, terdapat Rmarkdown yang berisi
 - praktikum minggu 1-7
